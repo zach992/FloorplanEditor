@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Floorplan Editor</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+            overflow: hidden;
+        }
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .sidebar-section {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .sidebar-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 14px;
+            border: 1px solid #d0d0d0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .btn:hover:not(:disabled) {
+            background: #f5f5f5;
+            border-color: #3498db;
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+            color: white;
+            border-color: #27ae60;
+        }
+        .btn-success:hover:not(:disabled) {
+            background: #229954;
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+            border-color: #e74c3c;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background: #c0392b;
+        }
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .layer-item:hover {
+            background: #f5f5f5;
+        }
+        .layer-checkbox {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .layer-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 2px solid #ddd;
+        }
+        .furniture-library {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .library-item {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            background: white;
+        }
+        .library-item:hover {
+            border-color: #3498db;
+            background: #f0f8ff;
+            transform: translateY(-2px);
+        }
+        .library-item-icon {
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+        .library-item-name {
+            font-size: 11px;
+            color: #666;
+            font-weight: 500;
+        }
+        .saved-layout {
+            padding: 10px;
+            margin: 6px 0;
+            background: #f8f9fa;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .saved-layout:hover {
+            background: #e9ecef;
+            transform: translateX(4px);
+        }
+        .saved-layout-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .saved-layout-time {
+            font-size: 11px;
+            color: #666;
+        }
+        .saved-layout-actions {
+            display: flex;
+            gap: 4px;
+        }
+        .saved-layout-actions button {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .top-toolbar {
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .alignment-toolbar {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .alignment-toolbar-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-right: 8px;
+        }
+        .canvas-area {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        svg {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .handle {
+            cursor: nwse-resize;
+            fill: white;
+            stroke: #3498db;
+            stroke-width: 2;
+        }
+        .rotate-handle {
+            cursor: grab;
+            fill: #3498db;
+        }
+        .rotate-handle:active {
+            cursor: grabbing;
+        }
+        .selected {
+            filter: drop-shadow(0 0 6px rgba(52, 152, 219, 0.6));
+        }
+        .selection-box {
+            fill: rgba(52, 152, 219, 0.1);
+            stroke: #3498db;
+            stroke-width: 2;
+            stroke-dasharray: 5,5;
+        }
+        .measurement {
+            font-size: 11px;
+            fill: #e74c3c;
+            font-weight: 600;
+        }
+        .draggable {
+            cursor: move;
+        }
+        .draggable:hover {
+            opacity: 0.9;
+        }
+        .status-bar {
+            background: #2c3e50;
+            color: white;
+            padding: 8px 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .autosave-indicator {
+            color: #27ae60;
+            font-size: 11px;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .file-input {
+            display: none;
+        }
+        @media print {
+            .sidebar, .top-toolbar, .status-bar, .alignment-toolbar { display: none; }
+            .main-area { overflow: visible; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Furniture templates library
+        const FURNITURE_LIBRARY = {
+            furniture: [
+                { type: 'sofa', name: 'Sofa', icon: '🛋️', width: 140, height: 60, color: '#7f8c8d' },
+                { type: 'armchair', name: 'Armchair', icon: '💺', width: 60, height: 60, color: '#95a5a6' },
+                { type: 'coffee-table', name: 'Coffee Table', icon: '⬜', width: 80, height: 50, color: '#d4a574' },
+                { type: 'tv-stand', name: 'TV Stand', icon: '📺', width: 100, height: 25, color: '#34495e' },
+                { type: 'bookshelf', name: 'Bookshelf', icon: '📚', width: 50, height: 70, color: '#8B4513' },
+                { type: 'plant', name: 'Plant', icon: '🪴', width: 30, height: 30, color: '#27ae60' }
+            ],
+            studio: [
+                { type: 'desk', name: 'Desk', icon: '🗄️', width: 160, height: 50, color: '#95a5a6' },
+                { type: 'monitor', name: 'Monitor', icon: '🖥️', width: 20, height: 25, color: '#2c3e50' },
+                { type: 'chair', name: 'Chair', icon: '💺', width: 30, height: 30, color: '#34495e' },
+                { type: 'mic', name: 'Microphone', icon: '🎤', width: 10, height: 35, color: '#e74c3c' },
+                { type: 'keyboard', name: 'Keyboard', icon: '🎹', width: 120, height: 40, color: '#2c3e50' },
+                { type: 'guitar', name: 'Guitar Stand', icon: '🎸', width: 30, height: 60, color: '#d35400' }
+            ]
+        };
+
+        // Initial state
+        const INITIAL_ITEMS = [
+            { id: 'item-1', type: 'sofa', layer: 'furniture', x: 140, y: 260, width: 140, height: 60, rotation: 0, color: '#7f8c8d', name: 'Sofa' },
+            { id: 'item-2', type: 'coffee-table', layer: 'furniture', x: 170, y: 340, width: 80, height: 50, rotation: 0, color: '#d4a574', name: 'Coffee Table' },
+            { id: 'item-3', type: 'tv-stand', layer: 'furniture', x: 130, y: 80, width: 100, height: 25, rotation: 0, color: '#34495e', name: 'TV Stand' },
+            { id: 'item-4', type: 'bookshelf', layer: 'furniture', x: 350, y: 360, width: 50, height: 70, rotation: 0, color: '#8B4513', name: 'Bookshelf' },
+            { id: 'item-5', type: 'desk', layer: 'studio', x: 440, y: 240, width: 160, height: 50, rotation: 0, color: '#95a5a6', name: 'Desk' },
+            { id: 'item-6', type: 'monitor', layer: 'studio', x: 460, y: 235, width: 20, height: 25, rotation: 0, color: '#2c3e50', name: 'Monitor L' },
+            { id: 'item-7', type: 'monitor', layer: 'studio', x: 560, y: 235, width: 20, height: 25, rotation: 0, color: '#2c3e50', name: 'Monitor R' },
+            { id: 'item-8', type: 'chair', layer: 'studio', x: 505, y: 295, width: 30, height: 30, rotation: 0, color: '#34495e', name: 'Chair' },
+            { id: 'item-9', type: 'mic', layer: 'studio', x: 515, y: 203, width: 10, height: 35, rotation: 0, color: '#e74c3c', name: 'Mic' }
+        ];
+
+        function FloorplanEditor() {
+            const [items, setItems] = useState(INITIAL_ITEMS);
+            const [history, setHistory] = useState([INITIAL_ITEMS]);
+            const [historyIndex, setHistoryIndex] = useState(0);
+            const [selectedIds, setSelectedIds] = useState([]); // CHANGED: multi-select
+            const [clipboard, setClipboard] = useState(null);
+            const [layers, setLayers] = useState({
+                furniture: { visible: true, name: 'Furniture', color: '#7f8c8d' },
+                studio: { visible: true, name: 'Studio Equipment', color: '#34495e' },
+                acoustic: { visible: true, name: 'Acoustic Treatment', color: '#e67e22' }
+            });
+            const [dragState, setDragState] = useState(null);
+            const [selectionBox, setSelectionBox] = useState(null);
+            const [measurements, setMeasurements] = useState([]);
+            const [savedLayouts, setSavedLayouts] = useState([]);
+            const [showSaveModal, setShowSaveModal] = useState(false);
+            const [saveLayoutName, setSaveLayoutName] = useState('');
+            const [lastSaved, setLastSaved] = useState(null);
+            const svgRef = useRef(null);
+            const fileInputRef = useRef(null);
+
+            const ROOM_BOUNDS = {
+                main: { x: 100, y: 50, width: 320, height: 400 },
+                studio: { x: 420, y: 150, width: 200, height: 160 }
+            };
+
+            // Load saved layouts on mount
+            useEffect(() => {
+                const saved = localStorage.getItem('floorplan-layouts');
+                if (saved) {
+                    setSavedLayouts(JSON.parse(saved));
+                }
+
+                // Check for autosave
+                const autosave = localStorage.getItem('floorplan-autosave');
+                if (autosave) {
+                    const data = JSON.parse(autosave);
+                    const minutesAgo = Math.floor((Date.now() - data.timestamp) / 60000);
+                    if (minutesAgo < 60 && confirm(`Restore autosaved session from ${minutesAgo} minutes ago?`)) {
+                        setItems(data.items);
+                        addToHistory(data.items);
+                    }
+                }
+            }, []);
+
+            // Auto-save every 30 seconds
+            useEffect(() => {
+                const autoSave = setInterval(() => {
+                    localStorage.setItem('floorplan-autosave', JSON.stringify({
+                        items,
+                        timestamp: Date.now()
+                    }));
+                    setLastSaved(new Date());
+                }, 30000);
+
+                return () => clearInterval(autoSave);
+            }, [items]);
+
+            // Add to history
+            const addToHistory = (newItems) => {
+                const newHistory = history.slice(0, historyIndex + 1);
+                newHistory.push(JSON.parse(JSON.stringify(newItems)));
+                setHistory(newHistory);
+                setHistoryIndex(newHistory.length - 1);
+            };
+
+            // Undo/Redo
+            const undo = () => {
+                if (historyIndex > 0) {
+                    setHistoryIndex(historyIndex - 1);
+                    setItems(JSON.parse(JSON.stringify(history[historyIndex - 1])));
+                }
+            };
+
+            const redo = () => {
+                if (historyIndex < history.length - 1) {
+                    setHistoryIndex(historyIndex + 1);
+                    setItems(JSON.parse(JSON.stringify(history[historyIndex + 1])));
+                }
+            };
+
+            // Toggle layer
+            const toggleLayer = (layerId) => {
+                setLayers(prev => ({
+                    ...prev,
+                    [layerId]: { ...prev[layerId], visible: !prev[layerId].visible }
+                }));
+            };
+
+            // Add item
+            const addItem = (template, layerType) => {
+                const newItem = {
+                    id: `item-${Date.now()}`,
+                    type: template.type,
+                    layer: layerType,
+                    x: 250,
+                    y: 250,
+                    width: template.width,
+                    height: template.height,
+                    rotation: 0,
+                    color: template.color,
+                    name: template.name
+                };
+                const newItems = [...items, newItem];
+                setItems(newItems);
+                addToHistory(newItems);
+                setSelectedIds([newItem.id]);
+            };
+
+            // Delete selected
+            const deleteSelected = () => {
+                if (selectedIds.length > 0) {
+                    const newItems = items.filter(item => !selectedIds.includes(item.id));
+                    setItems(newItems);
+                    addToHistory(newItems);
+                    setSelectedIds([]);
+                }
+            };
+
+            // Duplicate selected
+            const duplicateSelected = () => {
+                if (selectedIds.length === 0) return;
+
+                const itemsToDuplicate = items.filter(i => selectedIds.includes(i.id));
+                const newItems = itemsToDuplicate.map(item => ({
+                    ...item,
+                    id: `item-${Date.now()}-${Math.random()}`,
+                    x: item.x + 20,
+                    y: item.y + 20,
+                    name: `${item.name} Copy`
+                }));
+
+                const updatedItems = [...items, ...newItems];
+                setItems(updatedItems);
+                addToHistory(updatedItems);
+                setSelectedIds(newItems.map(i => i.id));
+            };
+
+            // Copy/Paste
+            const copySelected = () => {
+                if (selectedIds.length > 0) {
+                    const itemsToCopy = items.filter(i => selectedIds.includes(i.id));
+                    setClipboard(itemsToCopy);
+                }
+            };
+
+            const paste = () => {
+                if (!clipboard) return;
+
+                const newItems = clipboard.map(item => ({
+                    ...item,
+                    id: `item-${Date.now()}-${Math.random()}`,
+                    x: item.x + 30,
+                    y: item.y + 30
+                }));
+
+                const updatedItems = [...items, ...newItems];
+                setItems(updatedItems);
+                addToHistory(updatedItems);
+                setSelectedIds(newItems.map(i => i.id));
+            };
+
+            // Alignment functions
+            const alignLeft = () => {
+                if (selectedIds.length < 2) return;
+                const selectedItems = items.filter(i => selectedIds.includes(i.id));
+                const minX = Math.min(...selectedItems.map(i => i.x));
+                const newItems = items.map(item =>
+                    selectedIds.includes(item.id) ? { ...item, x: minX } : item
+                );
+                setItems(newItems);
+                addToHistory(newItems);
+            };
+
+            const alignRight = () => {
+                if (selectedIds.length < 2) return;
+                const selectedItems = items.filter(i => selectedIds.includes(i.id));
+                const maxX = Math.max(...selectedItems.map(i => i.x + i.width));
+                const newItems = items.map(item =>
+                    selectedIds.includes(item.id) ? { ...item, x: maxX - item.width } : item
+                );
+                setItems(newItems);
+                addToHistory(newItems);
+            };
+
+            const alignTop = () => {
+                if (selectedIds.length < 2) return;
+                const selectedItems = items.filter(i => selectedIds.includes(i.id));
+                const minY = Math.min(...selectedItems.map(i => i.y));
+                const newItems = items.map(item =>
+                    selectedIds.includes(item.id) ? { ...item, y: minY } : item
+                );
+                setItems(newItems);
+                addToHistory(newItems);
+            };
+
+            const alignBottom = () => {
+                if (selectedIds.length < 2) return;
+                const selectedItems = items.filter(i => selectedIds.includes(i.id));
+                const maxY = Math.max(...selectedItems.map(i => i.y + i.height));
+                const newItems = items.map(item =>
+                    selectedIds.includes(item.id) ? { ...item, y: maxY - item.height } : item
+                );
+                setItems(newItems);
+                addToHistory(newItems);
+            };
+
+            const alignCenterH = () => {
+                if (selectedIds.length < 2) return;
+                const selectedItems = items.filter(i => selectedIds.includes(i.id));
+                const centerY = selectedItems.reduce((sum, i) => sum + i.y + i.height/2, 0) / selectedItems.length;
+                const newItems = items.map(item =>
+                    selectedIds.includes(item.id) ? { ...item, y: centerY - item.height/2 } : item
+                );
+                setItems(newItems);
+                addToHistory(newItems);
+            };
+
+            const alignCenterV = () => {
+                if (selectedIds.length < 2) return;
+                const selectedItems = items.filter(i => selectedIds.includes(i.id));
+                const centerX = selectedItems.reduce((sum, i) => sum + i.x + i.width/2, 0) / selectedItems.length;
+                const newItems = items.map(item =>
+                    selectedIds.includes(item.id) ? { ...item, x: centerX - item.width/2 } : item
+                );
+                setItems(newItems);
+                addToHistory(newItems);
+            };
+
+            const distributeH = () => {
+                if (selectedIds.length < 3) return;
+                const selectedItems = items.filter(i => selectedIds.includes(i.id)).sort((a, b) => a.x - b.x);
+                const totalWidth = selectedItems[selectedItems.length - 1].x + selectedItems[selectedItems.length - 1].width - selectedItems[0].x;
+                const itemsWidth = selectedItems.reduce((sum, i) => sum + i.width, 0);
+                const gap = (totalWidth - itemsWidth) / (selectedItems.length - 1);
+
+                let currentX = selectedItems[0].x;
+                const updates = {};
+                selectedItems.forEach((item, i) => {
+                    if (i > 0) {
+                        currentX += selectedItems[i - 1].width + gap;
+                    }
+                    updates[item.id] = currentX;
+                    if (i < selectedItems.length - 1) currentX += 0;
+                });
+
+                const newItems = items.map(item =>
+                    updates[item.id] !== undefined ? { ...item, x: updates[item.id] } : item
+                );
+                setItems(newItems);
+                addToHistory(newItems);
+            };
+
+            // Save/Load functions
+            const saveLayout = () => {
+                if (!saveLayoutName.trim()) return;
+
+                const newLayout = {
+                    id: Date.now(),
+                    name: saveLayoutName,
+                    items: JSON.parse(JSON.stringify(items)),
+                    timestamp: Date.now()
+                };
+
+                const updated = [...savedLayouts, newLayout];
+                setSavedLayouts(updated);
+                localStorage.setItem('floorplan-layouts', JSON.stringify(updated));
+                setShowSaveModal(false);
+                setSaveLayoutName('');
+            };
+
+            const loadLayout = (layout) => {
+                setItems(layout.items);
+                addToHistory(layout.items);
+                setSelectedIds([]);
+            };
+
+            const deleteLayout = (id) => {
+                const updated = savedLayouts.filter(l => l.id !== id);
+                setSavedLayouts(updated);
+                localStorage.setItem('floorplan-layouts', JSON.stringify(updated));
+            };
+
+            const exportJSON = () => {
+                const data = {
+                    version: '1.0',
+                    name: 'Floorplan Export',
+                    items,
+                    metadata: { created: Date.now() }
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'floorplan-layout.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const importJSON = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        setItems(data.items);
+                        addToHistory(data.items);
+                        setSelectedIds([]);
+                    } catch (err) {
+                        alert('Invalid file format');
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+            };
+
+            // SVG helpers
+            const getSVGPoint = (evt) => {
+                const svg = svgRef.current;
+                const pt = svg.createSVGPoint();
+                pt.x = evt.clientX;
+                pt.y = evt.clientY;
+                return pt.matrixTransform(svg.getScreenCTM().inverse());
+            };
+
+            const checkCollision = (item) => {
+                const bounds = item.x >= 420 ? ROOM_BOUNDS.studio : ROOM_BOUNDS.main;
+                const margin = 5;
+                return (
+                    item.x < bounds.x + margin ||
+                    item.y < bounds.y + margin ||
+                    item.x + item.width > bounds.x + bounds.width - margin ||
+                    item.y + item.height > bounds.y + bounds.height - margin
+                );
+            };
+
+            const calculateMeasurements = (item) => {
+                if (!item) return [];
+                const bounds = item.x >= 420 ? ROOM_BOUNDS.studio : ROOM_BOUNDS.main;
+                const measurements = [];
+
+                const leftDist = Math.round((item.x - bounds.x) * 0.5);
+                const topDist = Math.round((item.y - bounds.y) * 0.5);
+                const rightDist = Math.round((bounds.x + bounds.width - (item.x + item.width)) * 0.5);
+                const bottomDist = Math.round((bounds.y + bounds.height - (item.y + item.height)) * 0.5);
+
+                if (leftDist < 50) measurements.push({ text: `${leftDist}"`, x: item.x - 15, y: item.y + item.height / 2 });
+                if (topDist < 50) measurements.push({ text: `${topDist}"`, x: item.x + item.width / 2, y: item.y - 10 });
+                if (rightDist < 50) measurements.push({ text: `${rightDist}"`, x: item.x + item.width + 15, y: item.y + item.height / 2 });
+                if (bottomDist < 50) measurements.push({ text: `${bottomDist}"`, x: item.x + item.width / 2, y: item.y + item.height + 20 });
+
+                return measurements;
+            };
+
+            const isInsideBox = (item, box) => {
+                const minX = Math.min(box.startX, box.endX);
+                const maxX = Math.max(box.startX, box.endX);
+                const minY = Math.min(box.startY, box.endY);
+                const maxY = Math.max(box.startY, box.endY);
+
+                return item.x >= minX && item.x + item.width <= maxX &&
+                       item.y >= minY && item.y + item.height <= maxY;
+            };
+
+            // Mouse handlers
+            const handleMouseDown = (evt, itemId, action = 'move') => {
+                evt.stopPropagation();
+                const point = getSVGPoint(evt);
+                const item = items.find(i => i.id === itemId);
+
+                // Multi-select with Shift/Ctrl
+                if (action === 'move' && (evt.shiftKey || evt.ctrlKey)) {
+                    setSelectedIds(prev =>
+                        prev.includes(itemId)
+                            ? prev.filter(id => id !== itemId)
+                            : [...prev, itemId]
+                    );
+                    return;
+                }
+
+                // Calculate new selection synchronously to avoid state update issues
+                const newSelection = selectedIds.includes(itemId) ? selectedIds : [itemId];
+
+                // Update selection if needed
+                if (!selectedIds.includes(itemId)) {
+                    setSelectedIds(newSelection);
+                }
+
+                // Calculate positions based on NEW selection, not old state
+                const itemsToMove = action === 'move' ? newSelection : [itemId];
+                const startPositions = items.filter(i => itemsToMove.includes(i.id)).map(i => ({
+                    id: i.id,
+                    x: i.x,
+                    y: i.y
+                }));
+
+                setDragState({
+                    action,
+                    itemIds: itemsToMove,
+                    startX: point.x,
+                    startY: point.y,
+                    startPositions,
+                    startItem: item
+                });
+            };
+
+            const handleMouseMove = (evt) => {
+                if (selectionBox) {
+                    const point = getSVGPoint(evt);
+                    setSelectionBox(prev => ({ ...prev, endX: point.x, endY: point.y }));
+                    return;
+                }
+
+                if (!dragState) return;
+
+                const point = getSVGPoint(evt);
+                const dx = point.x - dragState.startX;
+                const dy = point.y - dragState.startY;
+
+                setItems(prevItems => {
+                    const newItems = prevItems.map(item => {
+                        if (dragState.action === 'move' && dragState.itemIds.includes(item.id)) {
+                            const startPos = dragState.startPositions.find(p => p.id === item.id);
+                            return { ...item, x: startPos.x + dx, y: startPos.y + dy };
+                        } else if (dragState.action === 'resize' && item.id === dragState.startItem.id) {
+                            return {
+                                ...item,
+                                width: Math.max(20, dragState.startItem.width + dx),
+                                height: Math.max(20, dragState.startItem.height + dy)
+                            };
+                        } else if (dragState.action === 'rotate' && item.id === dragState.startItem.id) {
+                            const centerX = item.x + item.width / 2;
+                            const centerY = item.y + item.height / 2;
+                            const angle = Math.atan2(point.y - centerY, point.x - centerX) * (180 / Math.PI);
+                            return { ...item, rotation: angle };
+                        }
+                        return item;
+                    });
+
+                    const currentItem = newItems.find(i => i.id === dragState.startItem.id);
+                    setMeasurements(calculateMeasurements(currentItem));
+
+                    return newItems;
+                });
+            };
+
+            const handleMouseUp = () => {
+                if (selectionBox) {
+                    const selected = items.filter(item => isInsideBox(item, selectionBox)).map(i => i.id);
+                    setSelectedIds(selected);
+                    setSelectionBox(null);
+                    return;
+                }
+
+                if (dragState) {
+                    addToHistory(items);
+                    setDragState(null);
+                    setMeasurements([]);
+                }
+            };
+
+            const handleSVGMouseDown = (evt) => {
+                if (evt.target === svgRef.current || evt.target.tagName === 'rect' && evt.target.getAttribute('data-bg')) {
+                    const point = getSVGPoint(evt);
+                    setSelectionBox({ startX: point.x, startY: point.y, endX: point.x, endY: point.y });
+                    setSelectedIds([]);
+                }
+            };
+
+            // Keyboard shortcuts - use ref to avoid re-creating handlers
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    // Undo/Redo
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                        e.preventDefault();
+                        undo();
+                        return;
+                    }
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                        e.preventDefault();
+                        redo();
+                        return;
+                    }
+                    // Duplicate
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+                        e.preventDefault();
+                        duplicateSelected();
+                        return;
+                    }
+                    // Copy
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+                        e.preventDefault();
+                        copySelected();
+                        return;
+                    }
+                    // Paste
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+                        e.preventDefault();
+                        paste();
+                        return;
+                    }
+                    // Delete
+                    if (e.key === 'Delete' || e.key === 'Backspace') {
+                        if (!e.target.matches('input, textarea')) {
+                            e.preventDefault();
+                            deleteSelected();
+                        }
+                        return;
+                    }
+                    // Escape
+                    if (e.key === 'Escape') {
+                        setSelectedIds([]);
+                        setShowSaveModal(false);
+                        return;
+                    }
+                };
+
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [historyIndex, selectedIds, clipboard]);
+
+            const formatTime = (timestamp) => {
+                const date = new Date(timestamp);
+                return date.toLocaleString();
+            };
+
+            return (
+                <div className="app">
+                    {/* Sidebar */}
+                    <div className="sidebar">
+                        {/* History */}
+                        <div className="sidebar-section">
+                            <h3>History</h3>
+                            <div className="toolbar">
+                                <button className="btn" onClick={undo} disabled={historyIndex === 0} title="Ctrl+Z">
+                                    ↶ Undo
+                                </button>
+                                <button className="btn" onClick={redo} disabled={historyIndex === history.length - 1} title="Ctrl+Y">
+                                    ↷ Redo
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Saved Layouts */}
+                        <div className="sidebar-section">
+                            <h3>Saved Layouts</h3>
+                            <div className="toolbar">
+                                <button className="btn btn-success" onClick={() => setShowSaveModal(true)}>
+                                    💾 Save
+                                </button>
+                                <button className="btn" onClick={exportJSON}>
+                                    ⬇️ Export
+                                </button>
+                                <button className="btn" onClick={() => fileInputRef.current.click()}>
+                                    ⬆️ Import
+                                </button>
+                            </div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".json"
+                                className="file-input"
+                                onChange={importJSON}
+                            />
+                            {savedLayouts.map(layout => (
+                                <div key={layout.id} className="saved-layout">
+                                    <div onClick={() => loadLayout(layout)}>
+                                        <div className="saved-layout-name">{layout.name}</div>
+                                        <div className="saved-layout-time">{formatTime(layout.timestamp)}</div>
+                                    </div>
+                                    <div className="saved-layout-actions">
+                                        <button className="btn btn-danger" onClick={() => deleteLayout(layout.id)}>
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Layers */}
+                        <div className="sidebar-section">
+                            <h3>Layers</h3>
+                            {Object.entries(layers).map(([id, layer]) => (
+                                <div key={id} className="layer-item" onClick={() => toggleLayer(id)}>
+                                    <input
+                                        type="checkbox"
+                                        className="layer-checkbox"
+                                        checked={layer.visible}
+                                        onChange={() => {}}
+                                    />
+                                    <div className="layer-color" style={{ background: layer.color }}></div>
+                                    <span>{layer.name}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Furniture Library */}
+                        <div className="sidebar-section">
+                            <h3>Furniture</h3>
+                            <div className="furniture-library">
+                                {FURNITURE_LIBRARY.furniture.map(item => (
+                                    <div
+                                        key={item.type}
+                                        className="library-item"
+                                        onClick={() => addItem(item, 'furniture')}
+                                    >
+                                        <div className="library-item-icon">{item.icon}</div>
+                                        <div className="library-item-name">{item.name}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Studio Equipment */}
+                        <div className="sidebar-section">
+                            <h3>Studio Equipment</h3>
+                            <div className="furniture-library">
+                                {FURNITURE_LIBRARY.studio.map(item => (
+                                    <div
+                                        key={item.type}
+                                        className="library-item"
+                                        onClick={() => addItem(item, 'studio')}
+                                    >
+                                        <div className="library-item-icon">{item.icon}</div>
+                                        <div className="library-item-name">{item.name}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Main Area */}
+                    <div className="main-area">
+                        {/* Top Toolbar */}
+                        <div className="top-toolbar">
+                            <h1 style={{ fontSize: '18px', fontWeight: 600 }}>Living Room & Recording Studio</h1>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button className="btn" onClick={() => { setItems(INITIAL_ITEMS); addToHistory(INITIAL_ITEMS); }}>Reset</button>
+                                <button className="btn btn-primary" onClick={() => window.print()}>Print</button>
+                            </div>
+                        </div>
+
+                        {/* Alignment Toolbar */}
+                        {selectedIds.length >= 2 && (
+                            <div className="alignment-toolbar">
+                                <span className="alignment-toolbar-label">{selectedIds.length} items selected</span>
+                                <button className="btn" onClick={alignLeft} title="Align Left">⬅️ Left</button>
+                                <button className="btn" onClick={alignRight} title="Align Right">➡️ Right</button>
+                                <button className="btn" onClick={alignTop} title="Align Top">⬆️ Top</button>
+                                <button className="btn" onClick={alignBottom} title="Align Bottom">⬇️ Bottom</button>
+                                <button className="btn" onClick={alignCenterV} title="Center Vertically">↕️ Center V</button>
+                                <button className="btn" onClick={alignCenterH} title="Center Horizontally">↔️ Center H</button>
+                                {selectedIds.length >= 3 && (
+                                    <button className="btn" onClick={distributeH} title="Distribute Horizontally">↔️ Distribute</button>
+                                )}
+                                <button className="btn" onClick={duplicateSelected} title="Ctrl+D">📋 Duplicate</button>
+                                <button className="btn btn-danger" onClick={deleteSelected} title="Delete">🗑️ Delete</button>
+                            </div>
+                        )}
+
+                        {/* Canvas */}
+                        <div className="canvas-area">
+                            <svg
+                                ref={svgRef}
+                                width="800"
+                                height="700"
+                                viewBox="0 0 800 700"
+                                onMouseMove={handleMouseMove}
+                                onMouseUp={handleMouseUp}
+                                onMouseLeave={handleMouseUp}
+                                onMouseDown={handleSVGMouseDown}
+                            >
+                                <defs>
+                                    <pattern id="acoustic" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                                        <line x1="0" y1="0" x2="10" y2="10" stroke="#e67e22" strokeWidth="1"/>
+                                    </pattern>
+                                </defs>
+
+                                {/* Background */}
+                                <rect x="0" y="0" width="800" height="700" fill="transparent" data-bg="true"/>
+
+                                {/* Living Room */}
+                                <rect x="100" y="50" width="320" height="400" fill="none" stroke="#000" strokeWidth="4"/>
+                                <line x1="180" y1="450" x2="230" y2="450" stroke="white" strokeWidth="5"/>
+                                <path d="M 180 450 Q 180 420 210 420" fill="none" stroke="#666" strokeWidth="1.5" strokeDasharray="3,2"/>
+                                <rect x="180" y="448" width="50" height="4" fill="#8B4513"/>
+                                <line x1="100" y1="150" x2="100" y2="200" stroke="#4A90E2" strokeWidth="5"/>
+                                <line x1="250" y1="50" x2="350" y2="50" stroke="#4A90E2" strokeWidth="5"/>
+
+                                {/* Studio */}
+                                <rect x="420" y="150" width="200" height="160" fill="#f9f9f9" stroke="#000" strokeWidth="4"/>
+                                <line x1="420" y1="200" x2="420" y2="270" stroke="white" strokeWidth="5"/>
+                                <path d="M 420 200 Q 445 200 445 230" fill="none" stroke="#666" strokeWidth="1.5" strokeDasharray="3,2"/>
+                                <line x1="620" y1="190" x2="620" y2="240" stroke="#4A90E2" strokeWidth="5"/>
+                                <text x="520" y="180" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#e74c3c">RECORDING STUDIO</text>
+
+                                {/* Acoustic Treatment */}
+                                {layers.acoustic.visible && (
+                                    <g>
+                                        <rect x="430" y="155" width="30" height="30" fill="url(#acoustic)" stroke="#e67e22" strokeWidth="2" opacity="0.7"/>
+                                        <rect x="475" y="155" width="30" height="30" fill="url(#acoustic)" stroke="#e67e22" strokeWidth="2" opacity="0.7"/>
+                                        <rect x="520" y="155" width="30" height="30" fill="url(#acoustic)" stroke="#e67e22" strokeWidth="2" opacity="0.7"/>
+                                        <rect x="565" y="155" width="30" height="30" fill="url(#acoustic)" stroke="#e67e22" strokeWidth="2" opacity="0.7"/>
+                                    </g>
+                                )}
+
+                                {/* Items */}
+                                {items.filter(item => layers[item.layer]?.visible).map(item => {
+                                    const isSelected = selectedIds.includes(item.id);
+                                    const hasCollision = checkCollision(item);
+
+                                    return (
+                                        <g key={item.id}>
+                                            <g
+                                                transform={`rotate(${item.rotation} ${item.x + item.width/2} ${item.y + item.height/2})`}
+                                                className={isSelected ? 'selected' : ''}
+                                            >
+                                                <rect
+                                                    x={item.x}
+                                                    y={item.y}
+                                                    width={item.width}
+                                                    height={item.height}
+                                                    fill={item.color}
+                                                    stroke={hasCollision ? '#e74c3c' : isSelected ? '#3498db' : '#333'}
+                                                    strokeWidth={hasCollision || isSelected ? 3 : 2}
+                                                    rx="3"
+                                                    className="draggable"
+                                                    onMouseDown={(e) => handleMouseDown(e, item.id, 'move')}
+                                                />
+                                                <text
+                                                    x={item.x + item.width/2}
+                                                    y={item.y + item.height/2}
+                                                    textAnchor="middle"
+                                                    dominantBaseline="middle"
+                                                    fontSize="10"
+                                                    fill="white"
+                                                    pointerEvents="none"
+                                                >
+                                                    {item.name}
+                                                </text>
+                                            </g>
+
+                                            {/* Selection Handles (only show for single selection) */}
+                                            {isSelected && selectedIds.length === 1 && (
+                                                <g>
+                                                    <circle
+                                                        cx={item.x + item.width}
+                                                        cy={item.y + item.height}
+                                                        r="6"
+                                                        className="handle"
+                                                        onMouseDown={(e) => handleMouseDown(e, item.id, 'resize')}
+                                                    />
+                                                    <circle
+                                                        cx={item.x + item.width/2}
+                                                        cy={item.y - 20}
+                                                        r="6"
+                                                        className="rotate-handle"
+                                                        onMouseDown={(e) => handleMouseDown(e, item.id, 'rotate')}
+                                                    />
+                                                    <line
+                                                        x1={item.x + item.width/2}
+                                                        y1={item.y}
+                                                        x2={item.x + item.width/2}
+                                                        y2={item.y - 20}
+                                                        stroke="#3498db"
+                                                        strokeWidth="1"
+                                                        strokeDasharray="2,2"
+                                                        pointerEvents="none"
+                                                    />
+                                                </g>
+                                            )}
+                                        </g>
+                                    );
+                                })}
+
+                                {/* Selection Box */}
+                                {selectionBox && (
+                                    <rect
+                                        x={Math.min(selectionBox.startX, selectionBox.endX)}
+                                        y={Math.min(selectionBox.startY, selectionBox.endY)}
+                                        width={Math.abs(selectionBox.endX - selectionBox.startX)}
+                                        height={Math.abs(selectionBox.endY - selectionBox.startY)}
+                                        className="selection-box"
+                                    />
+                                )}
+
+                                {/* Measurements */}
+                                {measurements.map((m, i) => (
+                                    <text key={i} x={m.x} y={m.y} className="measurement" textAnchor="middle">
+                                        {m.text}
+                                    </text>
+                                ))}
+
+                                {/* Labels */}
+                                <text x="260" y="250" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#2c3e50" opacity="0.3" pointerEvents="none">
+                                    LIVING ROOM
+                                </text>
+
+                                {/* Dimensions */}
+                                <g stroke="#999" strokeWidth="1" fill="#999" fontSize="11" pointerEvents="none">
+                                    <line x1="100" y1="470" x2="420" y2="470" strokeDasharray="2,2"/>
+                                    <text x="260" y="485" textAnchor="middle">20'</text>
+                                    <line x1="80" y1="50" x2="80" y2="450" strokeDasharray="2,2"/>
+                                    <text x="75" y="250" textAnchor="middle" transform="rotate(-90 75 250)">25'</text>
+                                    <line x1="420" y1="325" x2="620" y2="325" strokeDasharray="2,2"/>
+                                    <text x="520" y="340" textAnchor="middle">10'</text>
+                                    <line x1="640" y1="150" x2="640" y2="310" strokeDasharray="2,2"/>
+                                    <text x="645" y="230" textAnchor="middle" transform="rotate(-90 645 230)">12'</text>
+                                </g>
+
+                                {/* North Arrow */}
+                                <g transform="translate(700, 80)" pointerEvents="none">
+                                    <circle cx="0" cy="0" r="25" fill="none" stroke="#333" strokeWidth="1.5"/>
+                                    <polygon points="0,-18 -5,-5 0,-8 5,-5" fill="#333"/>
+                                    <text x="0" y="-25" textAnchor="middle" fontSize="12" fontWeight="bold">N</text>
+                                </g>
+                            </svg>
+                        </div>
+
+                        {/* Status Bar */}
+                        <div className="status-bar">
+                            <div className="status-item">
+                                <span>Selected:</span>
+                                <strong>{selectedIds.length === 0 ? 'None' : `${selectedIds.length} item${selectedIds.length > 1 ? 's' : ''}`}</strong>
+                            </div>
+                            {lastSaved && (
+                                <div className="status-item autosave-indicator">
+                                    ✓ Auto-saved {Math.floor((Date.now() - lastSaved) / 60000)}m ago
+                                </div>
+                            )}
+                            <div className="status-item" style={{marginLeft: 'auto'}}>
+                                <span>💡 Shift+Click for multi-select • Drag background to select area • Ctrl+D to duplicate</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Save Modal */}
+                    {showSaveModal && (
+                        <div className="modal-overlay" onClick={() => setShowSaveModal(false)}>
+                            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                                <div className="modal-title">Save Layout</div>
+                                <input
+                                    className="modal-input"
+                                    type="text"
+                                    placeholder="Enter layout name..."
+                                    value={saveLayoutName}
+                                    onChange={(e) => setSaveLayoutName(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && saveLayout()}
+                                    autoFocus
+                                />
+                                <div className="modal-buttons">
+                                    <button className="btn" onClick={() => setShowSaveModal(false)}>Cancel</button>
+                                    <button className="btn btn-success" onClick={saveLayout} disabled={!saveLayoutName.trim()}>
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<FloorplanEditor />, document.getElementById('root'));
+    </script>
+</body>
+</html>
